@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import joi from "@hapi/joi";
 import bcrypt from "bcrypt";
+import {v4 as uuid} from "uuid"
 import { MongoClient, ObjectId } from "mongodb";
 
 dotenv.config();
@@ -30,12 +31,14 @@ server.listen(process.env.PORT, () => {
 server.post('/cadastro', async (req, res) =>{
     const {name, email, password} = req.body
 
+    const hashPassword = bcrypt.hashSync(password, 10)
+
     try{
         const emailInUse = await db.collection('users').findOne({email})
 
         if(emailInUse) return res.sendStatus(409)
 
-        await db.collection('users').insertOne({name,email,password})
+        await db.collection('users').insertOne({name, email, password:hashPassword})
         
         return res.sendStatus(201)
     }catch(err){
@@ -44,6 +47,25 @@ server.post('/cadastro', async (req, res) =>{
     }
 
 
+})
+
+server.post('/', async (req, res) => {
+    const {email, password} = req.body
+
+    try{
+        const user = await db.collection('users').findOne({email})
+
+        if(user && bcrypt.compareSync(password, user.password)){
+            return res.sendStatus(200)
+        } else{
+            return res.sendStatus(401)
+        }
+
+        
+    }catch(err){
+        console.log(err)
+        res.sendStatus(500)
+    }
 })
 
 // 200: Ok => Significa que deu tudo certo com a requisição

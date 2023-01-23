@@ -1,10 +1,29 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import joi from "@hapi/joi";
+import Joi from "@hapi/joi";
 import bcrypt from "bcrypt";
 import { v4 as uuid } from "uuid";
 import { MongoClient, ObjectId } from "mongodb";
+
+const schemaSignUp = Joi.object({
+  name: Joi.string().min(1).required(),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(6).required(),
+});
+
+const schemaSignIn = Joi.object({
+  email: Joi.string().min(1).required(),
+  password: Joi.string().min(1).required(),
+});
+
+const schemaRegister = Joi.object({
+  userId: Joi.string().required(),
+  value: Joi.number().min(1).required(),
+  description: Joi.string().min(1).required(),
+  type: Joi.string().valid("in", "out").required(),
+  date: Joi.string().min(1).required(),
+});
 
 dotenv.config();
 
@@ -29,11 +48,17 @@ server.listen(process.env.PORT, () => {
 });
 
 server.post("/cadastro", async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, confirmPwd } = req.body;
 
   const hashPassword = bcrypt.hashSync(password, 10);
 
   try {
+    const signupValidated = schemaSignUp.validate(req.body, {
+      abortEarly: false,
+    });
+
+    if (signupValidated.error) return res.sendStatus(422);
+
     const emailInUse = await db.collection("users").findOne({ email });
 
     if (emailInUse) return res.sendStatus(409);
@@ -53,6 +78,14 @@ server.post("/", async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    const signinValidated = schemaSignIn.validate(req.body, {
+      abortEarly: false,
+    });
+
+    console.log(signinValidated)
+
+    if (signinValidated.error) return res.sendStatus(422);
+
     const user = await db.collection("users").findOne({ email });
 
     if (user && bcrypt.compareSync(password, user.password)) {
@@ -88,11 +121,10 @@ server.get("/home", async (req, res) => {
 
     const userTransactions = await db
       .collection("transactions")
-      .find({ userId:userid })
+      .find({ userId: userid })
       .toArray();
 
     console.log(userTransactions);
-
 
     return res.status(200).send(userTransactions);
     // const userExist = await db.collection('users').findOne(user)
@@ -105,6 +137,12 @@ server.post("/nova-entrada", async (req, res) => {
   const token = authorization?.replace("Bearer ", "");
 
   try {
+    const registerValidation = schemaRegister.validate(transactionRequest, {
+      abortEarly: false,
+    });
+
+    if (registerValidation.error) return res.sendStatus(422);
+
     const session = await db.collection("sessions").findOne({ token });
 
     if (!session) return res.sendStatus(401);
@@ -114,6 +152,31 @@ server.post("/nova-entrada", async (req, res) => {
     return res.sendStatus(201);
   } catch (err) {
     console.log("Deu ruim na entrada");
+    return res.sendStatus(500);
+  }
+});
+
+server.post("/nova-saida", async (req, res) => {
+  const transactionRequest = req.body;
+  const { authorization } = req.headers;
+  const token = authorization?.replace("Bearer ", "");
+
+  try {
+    const registerValidation = schemaRegister.validate(transactionRequest, {
+      abortEarly: false,
+    });
+
+    if (registerValidation.error) return res.sendStatus(422);
+
+    const session = await db.collection("sessions").findOne({ token });
+
+    if (!session) return res.sendStatus(401);
+
+    await db.collection("transactions").insertOne({ ...transactionRequest });
+
+    return res.sendStatus(201);
+  } catch (err) {
+    console.log("Deu ruim na saida");
     return res.sendStatus(500);
   }
 });

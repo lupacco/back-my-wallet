@@ -10,6 +10,7 @@ const schemaSignUp = Joi.object({
   name: Joi.string().min(1).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
+  confirmPwd: Joi.valid(Joi.ref("password")),
 });
 
 const schemaSignIn = Joi.object({
@@ -81,8 +82,6 @@ server.post("/", async (req, res) => {
     const signinValidated = schemaSignIn.validate(req.body, {
       abortEarly: false,
     });
-
-    console.log(signinValidated)
 
     if (signinValidated.error) return res.sendStatus(422);
 
@@ -177,6 +176,23 @@ server.post("/nova-saida", async (req, res) => {
     return res.sendStatus(201);
   } catch (err) {
     console.log("Deu ruim na saida");
+    return res.sendStatus(500);
+  }
+});
+
+server.delete("/home", async (req, res) => {
+  const { authorization, registerid } = req.headers;
+  const token = authorization?.replace("Bearer ", "");
+
+  try {
+    const session = await db.collection("sessions").findOne({ token });
+
+    if (!session) return res.sendStatus(401);
+
+    await db.collection("transactions").deleteOne({_id:ObjectId(registerid) });
+
+    return res.sendStatus(200)
+  } catch (err) {
     return res.sendStatus(500);
   }
 });

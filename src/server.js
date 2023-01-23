@@ -3,7 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import joi from "@hapi/joi";
 import bcrypt from "bcrypt";
-import {v4 as uuid} from "uuid"
+import { v4 as uuid } from "uuid";
 import { MongoClient, ObjectId } from "mongodb";
 
 dotenv.config();
@@ -28,45 +28,86 @@ server.listen(process.env.PORT, () => {
   console.log(`Running on PORT ${process.env.PORT}`);
 });
 
-server.post('/cadastro', async (req, res) =>{
-    const {name, email, password} = req.body
+server.post("/cadastro", async (req, res) => {
+  const { name, email, password } = req.body;
 
-    const hashPassword = bcrypt.hashSync(password, 10)
+  const hashPassword = bcrypt.hashSync(password, 10);
 
-    try{
-        const emailInUse = await db.collection('users').findOne({email})
+  try {
+    const emailInUse = await db.collection("users").findOne({ email });
 
-        if(emailInUse) return res.sendStatus(409)
+    if (emailInUse) return res.sendStatus(409);
 
-        await db.collection('users').insertOne({name, email, password:hashPassword})
-        
-        return res.sendStatus(201)
-    }catch(err){
-        console.log(err)
-        return res.sendStatus(500)
+    await db
+      .collection("users")
+      .insertOne({ name, email, password: hashPassword });
+
+    return res.sendStatus(201);
+  } catch (err) {
+    console.log(err);
+    return res.sendStatus(500);
+  }
+});
+
+server.post("/", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await db.collection("users").findOne({ email });
+
+    if (user && bcrypt.compareSync(password, user.password)) {
+      const token = uuid();
+      await db.collection("sessions").insertOne({ token, userID: user._id });
+
+      delete user.password;
+
+      return res.status(200).send({ ...user, token });
+    } else {
+      return res.sendStatus(401);
     }
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+});
 
+server.get("/home", async (req, res) => {
+  const userId = req.headers.userid;
 
-})
+  try {
+    const user = await db
+      .collection("users")
+      .findOne({ _id: ObjectId(userId) });
 
-server.post('/', async (req, res) => {
-    const {email, password} = req.body
+    if(!user) return res.sendStatus(404)
 
-    try{
-        const user = await db.collection('users').findOne({email})
+    const userTransactions = await db.collection('sessions').find({userId}).toArray()
 
-        if(user && bcrypt.compareSync(password, user.password)){
-            return res.sendStatus(200)
-        } else{
-            return res.sendStatus(401)
-        }
+    console.log(userTransactions);
 
-        
-    }catch(err){
-        console.log(err)
-        res.sendStatus(500)
-    }
-})
+    return res.sendStatus(200);
+    // const userExist = await db.collection('users').findOne(user)
+  } catch (err) {}
+});
+
+server.post("/nova-entrada", async (req, res) => {
+  const transactionRequest = req.body;
+  const {authorization} = req.headers
+  const token = authorization?.replace('Bearer ', '')
+
+  try {
+    const session = await db.collection('sessions').findOne({token})
+
+    if(!session) return res.sendStatus(401)
+
+    await db.collection("transactions").insertOne({...transactionRequest})
+
+    return res.sendStatus(201);
+  } catch (err) {
+    console.log("Deu ruim na entrada");
+    return res.sendStatus(500);
+  }
+});
 
 // 200: Ok => Significa que deu tudo certo com a requisição
 // 201: Created => Sucesso na criação do recurso

@@ -72,35 +72,44 @@ server.post("/", async (req, res) => {
 });
 
 server.get("/home", async (req, res) => {
-  const userId = req.headers.userid;
+  const { authorization, userid } = req.headers;
+  const token = authorization?.replace("Bearer ", "");
 
   try {
     const user = await db
       .collection("users")
-      .findOne({ _id: ObjectId(userId) });
+      .findOne({ _id: ObjectId(userid) });
 
-    if(!user) return res.sendStatus(404)
+    if (!user) return res.sendStatus(404);
 
-    const userTransactions = await db.collection('sessions').find({userId}).toArray()
+    const session = await db.collection("sessions").findOne({ token });
+
+    if (!session) return res.sendStatus(401);
+
+    const userTransactions = await db
+      .collection("transactions")
+      .find({ userId:userid })
+      .toArray();
 
     console.log(userTransactions);
 
-    return res.sendStatus(200);
+
+    return res.status(200).send(userTransactions);
     // const userExist = await db.collection('users').findOne(user)
   } catch (err) {}
 });
 
 server.post("/nova-entrada", async (req, res) => {
   const transactionRequest = req.body;
-  const {authorization} = req.headers
-  const token = authorization?.replace('Bearer ', '')
+  const { authorization } = req.headers;
+  const token = authorization?.replace("Bearer ", "");
 
   try {
-    const session = await db.collection('sessions').findOne({token})
+    const session = await db.collection("sessions").findOne({ token });
 
-    if(!session) return res.sendStatus(401)
+    if (!session) return res.sendStatus(401);
 
-    await db.collection("transactions").insertOne({...transactionRequest})
+    await db.collection("transactions").insertOne({ ...transactionRequest });
 
     return res.sendStatus(201);
   } catch (err) {

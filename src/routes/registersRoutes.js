@@ -6,7 +6,7 @@ import {
 } from "../controllers/userController.js";
 import { Router } from "express";
 
-const registerRouter = Router()
+const registerRouter = Router();
 
 registerRouter.get("/home", getRegisters);
 
@@ -16,4 +16,4 @@ registerRouter.post("/nova-saida", newOut);
 
 registerRouter.delete("/home", deleteRegister);
 
-export default registerRouter
+export default registerRouter;

@@ -4,19 +4,14 @@ import cors from "cors";
 import registerRouter from "./routes/registersRoutes.js";
 import authRouter from "./routes/authRoutes.js";
 
-
-
 const server = express();
 server.use(express.json());
 server.use(cors());
-server.use([registerRouter, authRouter])
-
+server.use([registerRouter, authRouter]);
 
 server.listen(process.env.PORT, () => {
   console.log(`Running on PORT ${process.env.PORT}`);
 });
-
-
 
 // 200: Ok => Significa que deu tudo certo com a requisição
 // 201: Created => Sucesso na criação do recurso

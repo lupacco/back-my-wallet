@@ -3,6 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "nodemonConfig":{
+    "watch": [
+      "index"
+    ],
+    "ext": "js",
+    "delay": 2
+  },
   "type": "module",
   "scripts": {
     "start": "nodemon src/server.js"

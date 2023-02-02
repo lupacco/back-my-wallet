@@ -1,7 +1,6 @@
 import { db } from "../config/database.js";
 import bcrypt from "bcrypt";
 import { v4 as uuid } from "uuid";
-import { schemaRegister } from "../schema/schemas.js";
 
 export async function getRegisters(req, res) {
   const { authorization, userid } = req.headers;
@@ -26,7 +25,7 @@ export async function getRegisters(req, res) {
     console.log(userTransactions);
 
     return res.status(200).send(userTransactions);
-    // const userExist = await db.collection('users').findOne(user)
+
   } catch (err) {
     console.log(err.message);
   }
@@ -38,12 +37,6 @@ export async function newEntry(req, res) {
   const token = authorization?.replace("Bearer ", "");
 
   try {
-    const registerValidation = schemaRegister.validate(transactionRequest, {
-      abortEarly: false,
-    });
-
-    if (registerValidation.error) return res.sendStatus(422);
-
     const session = await db.collection("sessions").findOne({ token });
 
     if (!session) return res.sendStatus(401);
@@ -63,12 +56,6 @@ export async function newOut(req, res) {
   const token = authorization?.replace("Bearer ", "");
 
   try {
-    const registerValidation = schemaRegister.validate(transactionRequest, {
-      abortEarly: false,
-    });
-
-    if (registerValidation.error) return res.sendStatus(422);
-
     const session = await db.collection("sessions").findOne({ token });
 
     if (!session) return res.sendStatus(401);

@@ -2,10 +2,10 @@
   "name": "back-my-wallet",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "nodemonConfig":{
     "watch": [
-      "index"
+      "server"
     ],
     "ext": "js",
     "delay": 2
